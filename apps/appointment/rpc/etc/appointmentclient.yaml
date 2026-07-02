@@ -1,6 +1,0 @@
-Name: appointmentclient.rpc
-ListenOn: 0.0.0.0:9090
-#Etcd:
-#  Hosts:
-#  - 127.0.0.1:2379
-#  Key: appointmentclient.rpc
