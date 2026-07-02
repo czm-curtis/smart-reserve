@@ -1,0 +1,28 @@
+syntax = "v1"
+
+info (
+	title:   "智能预约系统-网关服务"
+	desc:    "接收前端抢号预约请求的 HTTP 接口"
+	author:  "czm"
+	version: "v1"
+)
+
+// 抢号预约请求结构体
+type AppointmentReq {
+	UserId     int64 `json:"userId"` // 用户ID
+	ScheduleId int64 `json:"scheduleId"` // 预约排班/放号场次ID
+}
+
+// 抢号预约响应结构体
+type AppointmentResp {
+	Code    int    `json:"code"` // 状态码：0-成功，其他-失败
+	Msg     string `json:"msg"` // 错误提示信息
+	OrderNo string `json:"orderNo"` // 预约成功后的流水号/单号
+}
+
+// 定义 HTTP 服务
+service appointment-api {
+	@handler CreateAppointment
+	post /v1/appointment (AppointmentReq) returns (AppointmentResp)
+}
+
