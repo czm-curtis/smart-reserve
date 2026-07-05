@@ -1,0 +1,10 @@
+Name: appointment.rpc
+ListenOn: 0.0.0.0:9090
+
+BizRedis:
+  Host: 127.0.0.1:6379
+  Type: node
+#Etcd:
+#  Hosts:
+#  - 127.0.0.1:2379
+#  Key: appointment.rpc

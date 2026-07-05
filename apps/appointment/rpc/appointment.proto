@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+// 1. package 决定了在 proto 内部寻址时的命名空间
+package appointment;
+
+// 2. 【核心改动】告诉编译器，把最底层、原生的 pb.go 代码放到独立的 pb 文件夹下
+option go_package = "./pb";
+
+// 预约抢号的入参
+message CreateAppointmentReq {
+  int64 userId = 1;
+  int64 scheduleId = 2;
+}
+
+// 预约抢号的出参
+message CreateAppointmentResp {
+  int32 code = 1;
+  string msg = 2;
+  string orderNo = 3;
+}
+
+// 核心预约 RPC 服务接口
+service Appointment {
+  rpc CreateAppointment(CreateAppointmentReq) returns (CreateAppointmentResp);
+}

@@ -1,0 +1,25 @@
+syntax = "v1"
+
+info (
+	title:   "智能预约系统-网关服务"
+	desc:    "接收前端抢号预约请求的 HTTP 接口"
+	author:  "czm"
+	version: "v1"
+)
+
+type AppointmentReq {
+	UserId     int64 `json:"userId"`
+	ScheduleId int64 `json:"scheduleId"`
+}
+
+type AppointmentResp {
+	Code    int    `json:"code"`
+	Msg     string `json:"msg"`
+	OrderNo string `json:"orderNo"`
+}
+
+service appointment-api {
+	@handler CreateAppointment
+	post /v1/appointment (AppointmentReq) returns (AppointmentResp)
+}
+
