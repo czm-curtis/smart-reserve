@@ -7,6 +7,10 @@ import (
 
 type Config struct {
 	zrpc.RpcServerConf
-	BizRedis   redis.RedisConf
-	DataSource string
+	BizRedis     redis.RedisConf
+	DataSource   string
+	KqPusherConf struct {
+		Brokers []string
+		Topic   string
+	}
 }

@@ -74,17 +74,18 @@ func (l *CreateAppointmentLogic) CreateAppointment(in *pb.CreateAppointmentReq) 
 			Msg:  "很抱歉，该时段预约名额已满",
 		}, nil
 	case 1:
-		// 4. 扣减成功，生成唯一的预约流水号
+		// 1. 扣减成功，生成唯一的预约流水号
 		orderNo := fmt.Sprintf("RES_%s_%d", time.Now().Format("20060102"), in.UserId)
 		l.Infof("【预约成功】用户: %d, 场次: %d, 单号: %s", in.UserId, in.ScheduleId, orderNo)
 
-		// 2. 【核心改动】：非阻塞式将任务推入 Channel
-		select {
-		case l.svcCtx.OrderChan <- in:
-			// 成功送入管道，啥都不用管了
-		default:
-			// 如果 10000 个缓存全满了（极端情况），记录严重错误，触发兜底或限流
-			l.Errorf("异步落库队列已满！丢弃或转入死信：用户 %d", in.UserId)
+		// 2. 【核心改动】：构造 JSON 消息体，解耦下游落库
+		// 生产场景下，可以定义专用的消息 DTO，这里我们直接将核心要素序列化
+		msgJson := fmt.Sprintf(`{"userId":%d,"scheduleId":%d,"orderNo":"%s"}`, in.UserId, in.ScheduleId, orderNo)
+		// 3. 推送至 Kafka 管道（KqPusher 内部自带高并发缓冲与自动重试机制）
+		err = l.svcCtx.KqPusherClient.Push(l.ctx, msgJson)
+		if err != nil {
+			// 如果 Kafka 挂了，这里记录严重警报，但这属于下游落库风险，名额已经由 Redis 锁死，不影响前端给用户返回成功
+			l.Errorf("Kafka 消息投递严重失败！单号: %s, 错误: %v", orderNo, err)
 		}
 
 		return &pb.CreateAppointmentResp{

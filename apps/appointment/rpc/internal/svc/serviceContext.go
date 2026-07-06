@@ -8,6 +8,7 @@ import (
 	"github.com/czm-curtis/smart-reserve/apps/appointment/rpc/internal/config"
 	"github.com/czm-curtis/smart-reserve/apps/appointment/rpc/model"
 	"github.com/czm-curtis/smart-reserve/apps/appointment/rpc/pb"
+	"github.com/zeromicro/go-queue/kq"
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/redis"
@@ -20,6 +21,7 @@ type ServiceContext struct {
 	OrderChan             chan *pb.CreateAppointmentReq
 	AppointmentOrderModel model.AppointmentOrderModel
 	ScheduleModel         model.ScheduleModel
+	KqPusherClient        *kq.Pusher
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
@@ -31,6 +33,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 	scheduleModel := model.NewScheduleModel(sqlConn, cache.CacheConf{
 		{RedisConf: c.BizRedis, Weight: 100},
 	})
+	pusherClient := kq.NewPusher(c.KqPusherConf.Brokers, c.KqPusherConf.Topic)
 	// 初始化带有 10000 缓冲区的通道，防止高并发时瞬间挤爆内存
 	orderChan := make(chan *pb.CreateAppointmentReq, 1000)
 
@@ -55,6 +58,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		OrderChan:             orderChan,
 		AppointmentOrderModel: orderModel,
 		ScheduleModel:         scheduleModel,
+		KqPusherClient:        pusherClient,
 	}
 }
 

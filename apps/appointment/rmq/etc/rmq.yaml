@@ -1,0 +1,17 @@
+Name: appointment.rmq
+Log:
+  Mode: console
+
+# Kafka 消费者配置
+KqConsumerConf:
+  Name: appointment-order-consumer
+  Brokers:
+    - 127.0.0.1:9092
+  Topic: appointment-orders
+  Group: appointment-order-group  # 消费组名称
+  Workers: 4                      # 并发消费的工人数量
+
+DataSource: root:root_password@tcp(127.0.0.1:3306)/smart_reserve?charset=utf8mb4&parseTime=true&loc=Local
+BizRedis:
+  Host: 127.0.0.1:6379
+  Type: node

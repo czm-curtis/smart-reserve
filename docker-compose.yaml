@@ -28,6 +28,46 @@ services:
       - redis_data:/data
     restart: always
 
+  # Apache Kafka 单节点 KRaft 模式
+  kafka-reserve:
+    image: apache/kafka:3.7.0
+    container_name: kafka-reserve
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9094'
+      # 允许 Windows 宿主机上的 Go 服务通过 127.0.0.1:9092 直接连入
+      # 划分双通道：INTERNAL 供内部容器间通信，EXTERNAL 供你宿主机上的 Go 服务连入
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka-reserve:9093,EXTERNAL://127.0.0.1:9092'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    restart: always
+
+    # 【核心新增】：Kafka 自动初始化容器，启动后自动创建符合高并发要求的 Topic
+  kafka-init:
+    image: apache/kafka:3.7.0
+    container_name: kafka-init
+    depends_on:
+      - kafka-reserve
+    entrypoint: [ "sh", "-c" ]
+    command:
+      - |
+        echo "⏳ 正在等待 Kafka 集群就绪..."
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-reserve:9093 --list
+        
+        echo "🚀 正在自动创建核心业务 Topic..."
+        # 配合我们在 rmq.yaml 里设置的 Workers: 4，这里我们自动拉起 3 个或 4 个分区，完美匹配并发度
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-reserve:9093 --create --if-not-exists --topic appointment-orders --partitions 3 --replication-factor 1
+        
+        echo "🌟 Topic 创建成功，初始化容器功成身退！"
+
 # 声明命名数据卷
 volumes:
   mysql_data:
