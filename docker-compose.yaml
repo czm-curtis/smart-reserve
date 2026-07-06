@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # MySQL 基础设施组件
+  mysql-reserve:
+    image: mysql:8.0
+    container_name: mysql-reserve
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      # 【核心】：将本地的 sql 脚本映射到容器的自动初始化目录
+      - ./deploy/mysql-init:/docker-entrypoint-initdb.d
+      # 数据持久化，防止容器删了数据跟着消失
+      - mysql_data:/var/lib/mysql
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis 基础设施组件
+  redis-reserve:
+    image: redis:7-alpine
+    container_name: redis-reserve
+    ports:
+      - "6379:6379"
+    volumes:
+      # 数据持久化
+      - redis_data:/data
+    restart: always
+
+# 声明命名数据卷
+volumes:
+  mysql_data:
+  redis_data:

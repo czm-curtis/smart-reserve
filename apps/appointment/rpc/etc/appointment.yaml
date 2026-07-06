@@ -4,6 +4,9 @@ ListenOn: 0.0.0.0:9090
 BizRedis:
   Host: 127.0.0.1:6379
   Type: node
+
+DataSource: root:root_password@tcp(127.0.0.1:3306)/smart_reserve?charset=utf8mb4&parseTime=true&loc=Local
+
 #Etcd:
 #  Hosts:
 #  - 127.0.0.1:2379
