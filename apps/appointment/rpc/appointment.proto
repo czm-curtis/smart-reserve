@@ -19,7 +19,17 @@ message CreateAppointmentResp {
   string orderNo = 3;
 }
 
+message PreloadScheduleReq {
+  uint64 scheduleId = 1;
+}
+
+message PreloadScheduleResp {
+  int32 code = 1;
+  string msg = 2;
+}
+
 // 核心预约 RPC 服务接口
 service Appointment {
   rpc CreateAppointment(CreateAppointmentReq) returns (CreateAppointmentResp);
+  rpc PreloadSchedule(PreloadScheduleReq) returns (PreloadScheduleResp);
 }

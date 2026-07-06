@@ -16,6 +16,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodPost,
+				Path:    "/v1/admin/preload",
+				Handler: PreloadScheduleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/v1/appointment",
 				Handler: CreateAppointmentHandler(serverCtx),
 			},

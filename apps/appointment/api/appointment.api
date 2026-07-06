@@ -18,8 +18,20 @@ type AppointmentResp {
 	OrderNo string `json:"orderNo"`
 }
 
+type PreloadReq {
+	ScheduleId uint64 `json:"scheduleId"`
+}
+
+type PreloadResp {
+	Code int32  `json:"code"`
+	Msg  string `json:"msg"`
+}
+
 service appointment-api {
 	@handler CreateAppointment
 	post /v1/appointment (AppointmentReq) returns (AppointmentResp)
+
+	@handler PreloadSchedule
+	post /v1/admin/preload (PreloadReq) returns (PreloadResp)
 }
 

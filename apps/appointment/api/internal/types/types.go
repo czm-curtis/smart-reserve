@@ -13,3 +13,12 @@ type AppointmentResp struct {
 	Msg     string `json:"msg"`
 	OrderNo string `json:"orderNo"`
 }
+
+type PreloadReq struct {
+	ScheduleId uint64 `json:"scheduleId"`
+}
+
+type PreloadResp struct {
+	Code int32  `json:"code"`
+	Msg  string `json:"msg"`
+}

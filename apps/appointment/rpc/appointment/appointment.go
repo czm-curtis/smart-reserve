@@ -16,9 +16,12 @@ import (
 type (
 	CreateAppointmentReq  = pb.CreateAppointmentReq
 	CreateAppointmentResp = pb.CreateAppointmentResp
+	PreloadScheduleReq    = pb.PreloadScheduleReq
+	PreloadScheduleResp   = pb.PreloadScheduleResp
 
 	Appointment interface {
 		CreateAppointment(ctx context.Context, in *CreateAppointmentReq, opts ...grpc.CallOption) (*CreateAppointmentResp, error)
+		PreloadSchedule(ctx context.Context, in *PreloadScheduleReq, opts ...grpc.CallOption) (*PreloadScheduleResp, error)
 	}
 
 	defaultAppointment struct {
@@ -35,4 +38,9 @@ func NewAppointment(cli zrpc.Client) Appointment {
 func (m *defaultAppointment) CreateAppointment(ctx context.Context, in *CreateAppointmentReq, opts ...grpc.CallOption) (*CreateAppointmentResp, error) {
 	client := pb.NewAppointmentClient(m.cli.Conn())
 	return client.CreateAppointment(ctx, in, opts...)
+}
+
+func (m *defaultAppointment) PreloadSchedule(ctx context.Context, in *PreloadScheduleReq, opts ...grpc.CallOption) (*PreloadScheduleResp, error) {
+	client := pb.NewAppointmentClient(m.cli.Conn())
+	return client.PreloadSchedule(ctx, in, opts...)
 }

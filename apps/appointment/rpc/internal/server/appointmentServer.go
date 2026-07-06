@@ -27,3 +27,8 @@ func (s *AppointmentServer) CreateAppointment(ctx context.Context, in *pb.Create
 	l := logic.NewCreateAppointmentLogic(ctx, s.svcCtx)
 	return l.CreateAppointment(in)
 }
+
+func (s *AppointmentServer) PreloadSchedule(ctx context.Context, in *pb.PreloadScheduleReq) (*pb.PreloadScheduleResp, error) {
+	l := logic.NewPreloadScheduleLogic(ctx, s.svcCtx)
+	return l.PreloadSchedule(in)
+}

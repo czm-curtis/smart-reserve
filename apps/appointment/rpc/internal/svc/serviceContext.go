@@ -19,12 +19,16 @@ type ServiceContext struct {
 	RedisClient           *redis.Redis
 	OrderChan             chan *pb.CreateAppointmentReq
 	AppointmentOrderModel model.AppointmentOrderModel
+	ScheduleModel         model.ScheduleModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	rc := redis.MustNewRedis(c.BizRedis)
 	sqlConn := sqlx.NewMysql(c.DataSource)
 	orderModel := model.NewAppointmentOrderModel(sqlConn, cache.CacheConf{
+		{RedisConf: c.BizRedis, Weight: 100},
+	})
+	scheduleModel := model.NewScheduleModel(sqlConn, cache.CacheConf{
 		{RedisConf: c.BizRedis, Weight: 100},
 	})
 	// 初始化带有 10000 缓冲区的通道，防止高并发时瞬间挤爆内存
@@ -50,6 +54,7 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		RedisClient:           rc,
 		OrderChan:             orderChan,
 		AppointmentOrderModel: orderModel,
+		ScheduleModel:         scheduleModel,
 	}
 }
 
