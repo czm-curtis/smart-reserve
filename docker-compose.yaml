@@ -48,6 +48,9 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     restart: always
 
     # 【核心新增】：Kafka 自动初始化容器，启动后自动创建符合高并发要求的 Topic
@@ -72,3 +75,4 @@ services:
 volumes:
   mysql_data:
   redis_data:
+  kafka_data:
