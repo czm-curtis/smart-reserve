@@ -28,7 +28,7 @@ services:
       - redis_data:/data
     restart: always
 
-  # Apache Kafka 单节点 KRaft 模式
+  # 坚守官方 apache/kafka 镜像
   kafka-reserve:
     image: apache/kafka:3.7.0
     container_name: kafka-reserve
@@ -37,11 +37,11 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: 'broker,controller'
-      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9094'
-      # 允许 Windows 宿主机上的 Go 服务通过 127.0.0.1:9092 直接连入
-      # 划分双通道：INTERNAL 供内部容器间通信，EXTERNAL 供你宿主机上的 Go 服务连入
-      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094'
-      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka-reserve:9093,EXTERNAL://127.0.0.1:9092'
+      # 【彻底纠正】：控制官通道独立走 9093 端口
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@localhost:9093'
+      # 【彻底纠正】：双通道划分。INTERNAL 走 9094，EXTERNAL 走 9092，CONTROLLER 独立走 9093！三个端口完全错开！
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:9094,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka-reserve:9094,EXTERNAL://127.0.0.1:9092'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT'
       KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
@@ -50,10 +50,11 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_LOG_DIRS: '/var/lib/kafka/data'
     volumes:
+      # 【核心避坑】：改用 Docker 全权管理的普通命名卷，不再映射宿主机本地相对路径，100% 避免权限闪退问题
       - kafka_data:/var/lib/kafka/data
     restart: always
 
-    # 【核心新增】：Kafka 自动初始化容器，启动后自动创建符合高并发要求的 Topic
+  # 影子初始化容器
   kafka-init:
     image: apache/kafka:3.7.0
     container_name: kafka-init
@@ -63,13 +64,25 @@ services:
     command:
       - |
         echo "⏳ 正在等待 Kafka 集群就绪..."
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-reserve:9093 --list
+        sleep 5
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-reserve:9094 --list
         
         echo "🚀 正在自动创建核心业务 Topic..."
-        # 配合我们在 rmq.yaml 里设置的 Workers: 4，这里我们自动拉起 3 个或 4 个分区，完美匹配并发度
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-reserve:9093 --create --if-not-exists --topic appointment-orders --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka-reserve:9094 --create --if-not-exists --topic appointment-orders --partitions 3 --replication-factor 1
         
-        echo "🌟 Topic 创建成功，初始化容器功成身退！"
+        echo "🌟 Topic 创建成功，初始化容器功成身退！"  # 追加到 docker-compose.yaml 的 services 节点下
+
+  k6-stress:
+    image: grafana/k6:latest
+    container_name: k6-stress
+    volumes:
+      - ./stress-test.js:/stress-test.js
+    # 注意：在容器网络内，网关地址需要调整为容器名，例如 http://api-reserve:8888
+    command: run /stress-test.js
+    network_mode: "host" # 使用 host 网络可以直接用 localhost 压测宿主机暴露的端口
+    depends_on:
+      - kafka-reserve
+
 
 # 声明命名数据卷
 volumes:
