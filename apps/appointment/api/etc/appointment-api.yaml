@@ -5,3 +5,7 @@ Port: 8888
 AppointmentRpc:
   Endpoints:
     - 127.0.0.1:9090
+
+AppointmentCanaryRpc:
+  Endpoints:
+    - 127.0.0.1:9091

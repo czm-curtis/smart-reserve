@@ -27,7 +27,10 @@ func NewCreateAppointmentLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 }
 
 func (l *CreateAppointmentLogic) CreateAppointment(req *types.AppointmentReq) (resp *types.AppointmentResp, err error) {
-	rpcResp, err := l.svcCtx.AppointmentRpc.CreateAppointment(l.ctx, &pb.CreateAppointmentReq{
+	// 💡【核心重构】：不再写死 StableRpc，而是传入当前 context 动态获取路由客户端
+	rpcClient := l.svcCtx.GetAppointmentRpcClient(l.ctx)
+
+	rpcResp, err := rpcClient.CreateAppointment(l.ctx, &pb.CreateAppointmentReq{
 		UserId:     req.UserId,
 		ScheduleId: req.ScheduleId,
 	})

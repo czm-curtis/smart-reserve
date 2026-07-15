@@ -9,6 +9,7 @@ import (
 
 	"github.com/czm-curtis/smart-reserve/apps/appointment/api/internal/config"
 	"github.com/czm-curtis/smart-reserve/apps/appointment/api/internal/handler"
+	"github.com/czm-curtis/smart-reserve/apps/appointment/api/internal/middleware"
 	"github.com/czm-curtis/smart-reserve/apps/appointment/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
@@ -28,7 +29,8 @@ func main() {
 
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
-
+	mid := middleware.NewCanaryMiddleware()
+	server.Use(mid.Handle)
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()
 }

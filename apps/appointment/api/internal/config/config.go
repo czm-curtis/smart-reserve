@@ -10,5 +10,6 @@ import (
 
 type Config struct {
 	rest.RestConf
-	AppointmentRpc zrpc.RpcClientConf // 告诉 Go 怎么解析 yaml 里的 RPC 地址
+	AppointmentRpc       zrpc.RpcClientConf // 稳定版
+	AppointmentCanaryRpc zrpc.RpcClientConf // 灰度版
 }

@@ -1,0 +1,18 @@
+Name: appointment.rpc
+ListenOn: 0.0.0.0:9091
+
+BizRedis:
+  Host: 127.0.0.1:6379
+  Type: node
+
+DataSource: root:root_password@tcp(127.0.0.1:3306)/smart_reserve?charset=utf8mb4&parseTime=true&loc=Local
+
+KqPusherConf:
+  Brokers:
+    - 127.0.0.1:9092
+  Topic: appointment-orders
+
+#Etcd:
+#  Hosts:
+#  - 127.0.0.1:2379
+#  Key: appointment.rpc

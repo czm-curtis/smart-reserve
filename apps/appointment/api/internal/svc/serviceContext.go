@@ -4,19 +4,32 @@
 package svc
 
 import (
+	"context"
+
 	"github.com/czm-curtis/smart-reserve/apps/appointment/api/internal/config"
 	"github.com/czm-curtis/smart-reserve/apps/appointment/rpc/appointment"
+	"github.com/zeromicro/go-zero/rest"
 	"github.com/zeromicro/go-zero/zrpc"
 )
 
 type ServiceContext struct {
-	Config         config.Config
-	AppointmentRpc appointment.Appointment
+	Config           config.Config
+	CanaryMiddleware rest.Middleware
+	StableRpc        appointment.Appointment
+	CanaryRpc        appointment.Appointment
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	return &ServiceContext{
-		Config:         c,
-		AppointmentRpc: appointment.NewAppointment(zrpc.MustNewClient(c.AppointmentRpc)),
+		Config:    c,
+		StableRpc: appointment.NewAppointment(zrpc.MustNewClient(c.AppointmentRpc)),
+		CanaryRpc: appointment.NewAppointment(zrpc.MustNewClient(c.AppointmentCanaryRpc)),
 	}
+}
+
+func (s *ServiceContext) GetAppointmentRpcClient(ctx context.Context) appointment.Appointment {
+	if isCanary, _ := ctx.Value("x-canary-route").(bool); isCanary {
+		return s.CanaryRpc
+	}
+	return s.StableRpc
 }

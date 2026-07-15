@@ -27,6 +27,10 @@ type PreloadResp {
 	Msg  string `json:"msg"`
 }
 
+@server(
+	middleware: CanaryMiddleware // 声明启用灰度中间件
+)
+
 service appointment-api {
 	@handler CreateAppointment
 	post /v1/appointment (AppointmentReq) returns (AppointmentResp)

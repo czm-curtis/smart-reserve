@@ -7,6 +7,7 @@ import (
 
 	"github.com/czm-curtis/smart-reserve/apps/appointment/rpc/internal/svc"
 	"github.com/czm-curtis/smart-reserve/apps/appointment/rpc/pb"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -53,6 +54,26 @@ func NewCreateAppointmentLogic(ctx context.Context, svcCtx *svc.ServiceContext) 
 func (l *CreateAppointmentLogic) CreateAppointment(in *pb.CreateAppointmentReq) (*pb.CreateAppointmentResp, error) {
 	slotsKey := fmt.Sprintf("reserve:slots:%d", in.ScheduleId)
 	userKey := fmt.Sprintf("reserve:user:%d:%d", in.UserId, in.ScheduleId)
+	md, ok := metadata.FromIncomingContext(l.ctx)
+	isCanary := false
+	if ok {
+		if values := md.Get("x-canary-stain"); len(values) > 0 && values[0] == "true" {
+			isCanary = true
+		}
+	}
+	// 2. 打印具有明显特征的日志，方便我们肉眼观察分流
+	if isCanary {
+		l.Logger.Infof("🔥 [Canary Cluster 9091] 命中灰度！正在处理用户 %d 的预约...", in.UserId)
+
+		// 你甚至可以在灰度环境返回稍微不一样的 Msg，方便 K6 验证
+		return &pb.CreateAppointmentResp{
+			Code:    200,
+			Msg:     "[Canary] 预约成功",
+			OrderNo: "CANARY_ORDER_xxx",
+		}, nil
+	}
+	// 3. 正常 Stable 流程
+	l.Logger.Infof("🟢 [Stable Cluster 9090] 正常流量。正在处理用户 %d 的预约...", in.UserId)
 	res, err := l.svcCtx.RedisClient.EvalCtx(l.ctx, luaReserveScript, []string{slotsKey, userKey})
 	if err != nil {
 		l.Error("Redis Lua 脚本执行失败: %v", err)

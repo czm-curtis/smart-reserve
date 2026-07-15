@@ -28,7 +28,7 @@ func NewPreloadScheduleLogic(ctx context.Context, svcCtx *svc.ServiceContext) *P
 }
 
 func (l *PreloadScheduleLogic) PreloadSchedule(req *types.PreloadReq) (resp *types.PreloadResp, err error) {
-	rpcResp, err := l.svcCtx.AppointmentRpc.PreloadSchedule(l.ctx, &pb.PreloadScheduleReq{
+	rpcResp, err := l.svcCtx.StableRpc.PreloadSchedule(l.ctx, &pb.PreloadScheduleReq{
 		ScheduleId: req.ScheduleId,
 	})
 	if err != nil {
