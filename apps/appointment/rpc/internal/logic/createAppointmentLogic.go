@@ -95,19 +95,57 @@ func (l *CreateAppointmentLogic) CreateAppointment(in *pb.CreateAppointmentReq) 
 			Msg:  "很抱歉，该时段预约名额已满",
 		}, nil
 	case 1:
-		// 1. 扣减成功，生成唯一的预约流水号
 		orderNo := fmt.Sprintf("RES_%s_%d", time.Now().Format("20060102"), in.UserId)
 		l.Infof("【预约成功】用户: %d, 场次: %d, 单号: %s", in.UserId, in.ScheduleId, orderNo)
 
-		// 2. 【核心改动】：构造 JSON 消息体，解耦下游落库
-		// 生产场景下，可以定义专用的消息 DTO，这里我们直接将核心要素序列化
 		msgJson := fmt.Sprintf(`{"userId":%d,"scheduleId":%d,"orderNo":"%s"}`, in.UserId, in.ScheduleId, orderNo)
-		// 3. 推送至 Kafka 管道（KqPusher 内部自带高并发缓冲与自动重试机制）
+
+		// ================= 微服务治理：熔断与降级 =================
+
+		// 检查故障模拟开关（通过 Redis 共享状态，管理 API 可以远程控制）
+		simulating, _ := l.svcCtx.RedisClient.Get("simulate:kafka:failure")
+		if simulating == "1" {
+			l.Errorf("⚠️ [故障模拟] 模拟 Kafka 写入失败！触发熔断降级演示")
+			l.svcCtx.KafkaBreaker.Failure()
+
+			// 降级：写入 Redis 延迟队列
+			_ = l.svcCtx.DegradationQueue.Enqueue(l.ctx, msgJson)
+			return &pb.CreateAppointmentResp{
+				Code:    0,
+				Msg:     "预约成功(降级模式:订单排队处理中)",
+				OrderNo: orderNo,
+			}, nil
+		}
+
+		// 检查熔断器状态：如果已打开，直接走降级
+		if !l.svcCtx.KafkaBreaker.Allow() {
+			l.Errorf("🔴 [熔断] 熔断器已打开，降级写入 Redis 延迟队列。单号: %s", orderNo)
+			_ = l.svcCtx.DegradationQueue.Enqueue(l.ctx, msgJson)
+			return &pb.CreateAppointmentResp{
+				Code:    0,
+				Msg:     "预约成功(降级模式:订单排队处理中)",
+				OrderNo: orderNo,
+			}, nil
+		}
+
+		// 熔断器闭合：正常投递 Kafka
 		err = l.svcCtx.KqPusherClient.Push(l.ctx, msgJson)
 		if err != nil {
-			// 如果 Kafka 挂了，这里记录严重警报，但这属于下游落库风险，名额已经由 Redis 锁死，不影响前端给用户返回成功
-			l.Errorf("Kafka 消息投递严重失败！单号: %s, 错误: %v", orderNo, err)
+			l.Errorf("❌ Kafka 消息投递失败！单号: %s, 错误: %v", orderNo, err)
+			l.svcCtx.KafkaBreaker.Failure()
+
+			// 降级：写入 Redis 延迟队列
+			_ = l.svcCtx.DegradationQueue.Enqueue(l.ctx, msgJson)
+			return &pb.CreateAppointmentResp{
+				Code:    0,
+				Msg:     "预约成功(降级模式:订单排队处理中)",
+				OrderNo: orderNo,
+			}, nil
 		}
+
+		// Kafka 写入成功
+		l.svcCtx.KafkaBreaker.Success()
+		l.Infof("✅ Kafka 消息投递成功，单号: %s", orderNo)
 
 		return &pb.CreateAppointmentResp{
 			Code:    0,

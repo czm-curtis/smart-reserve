@@ -1,18 +1,27 @@
 Name: appointment.rpc
 ListenOn: 0.0.0.0:9091
 
+# ==== 基础设施配置 ====
 BizRedis:
   Host: 127.0.0.1:6379
   Type: node
 
 DataSource: root:root_password@tcp(127.0.0.1:3306)/smart_reserve?charset=utf8mb4&parseTime=true&loc=Local
 
+# ==== 消息队列配置 ====
 KqPusherConf:
   Brokers:
     - 127.0.0.1:9092
   Topic: appointment-orders
 
-#Etcd:
-#  Hosts:
-#  - 127.0.0.1:2379
-#  Key: appointment.rpc
+# ==== 熔断器配置 ====
+# 灰度实例也启用熔断保护
+KafkaBreaker:
+  Threshold: 3
+  Cooldown: 30s
+
+# ==== 服务注册配置 ====
+Etcd:
+  Hosts:
+    - 127.0.0.1:2379
+  Key: appointment-canary.rpc

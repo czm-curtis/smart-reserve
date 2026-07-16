@@ -25,7 +25,7 @@ func (m *CanaryMiddleware) Handle(next http.HandlerFunc) http.HandlerFunc {
 		// 核心染色逻辑：UserId 末尾是 0 的用户（占 10% 概率）走灰度
 		if userId > 0 && userId%10 == 0 {
 			// 1. 本地进程内染色标签
-			context.WithValue(ctx, "x-canary-route", true)
+			ctx = context.WithValue(ctx, "x-canary-route", true)
 
 			// 2. 跨进程 gRPC Metadata 染色标签（向下游 RPC 广播）
 			md := metadata.Pairs("x-canary-stain", "true")

@@ -2,10 +2,30 @@ Name: appointment-api
 Host: 0.0.0.0
 Port: 8888
 
+# ==== 限流与缓存需要的 Redis ====
+BizRedis:
+  Host: 127.0.0.1:6379
+  Type: node
+
+# ==== 下游 RPC 服务（通过 etcd 自动发现） ====
 AppointmentRpc:
-  Endpoints:
-    - 127.0.0.1:9090
+  Target: etcd://127.0.0.1:2379/appointment.rpc
 
 AppointmentCanaryRpc:
-  Endpoints:
-    - 127.0.0.1:9091
+  Target: etcd://127.0.0.1:2379/appointment-canary.rpc
+
+# ==== 限流配置 ====
+# Period: 1 秒内
+# IpQuota: 每个 IP 最多 5 次请求 → 超过直接返回 429
+# UserQuota: 每个用户最多 10 次请求 → 防止单用户高频刷接口
+RateLimit:
+  Period: 1
+  IpQuota: 5
+  UserQuota: 10
+
+# ==== 网关熔断配置 ====
+# 连续 5 次 5xx 响应 → 熔断打开
+# 30 秒冷却后进入半开状态试探恢复
+GatewayBreaker:
+  Threshold: 5
+  Cooldown: 30s

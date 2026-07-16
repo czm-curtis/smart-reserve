@@ -72,6 +72,82 @@ services:
         
         echo "🌟 Topic 创建成功，初始化容器功成身退！"  # 追加到 docker-compose.yaml 的 services 节点下
 
+  etcd-reserve:
+    image: bitnami/etcd:3.5
+    container_name: etcd-reserve
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_ADVERTISED_LISTEN_URLS=http://etcd-reserve:2379,http://127.0.0.1:2379
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    restart: always
+
+  # ============================================================
+  # 应用服务 — 微服务治理演示
+  # ============================================================
+
+  # API 网关 — 统一入口，集成限流/熔断/灰度路由
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: api-gateway
+    ports:
+      - "8888:8888"
+    environment:
+      - TZ=Asia/Shanghai
+    depends_on:
+      - etcd-reserve
+      - redis-reserve
+      - mysql-reserve
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # RPC 稳定版实例 #1
+  appointment-rpc-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpc
+      args:
+        CONFIG_FILE: etc/appointment.yaml
+    container_name: appointment-rpc-1
+    ports:
+      - "9090:9090"
+    environment:
+      - TZ=Asia/Shanghai
+    depends_on:
+      - etcd-reserve
+      - redis-reserve
+      - mysql-reserve
+      - kafka-reserve
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # RPC 灰度版实例 — 接收 10% 染色流量
+  appointment-rpc-canary:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpc
+    container_name: appointment-rpc-canary
+    ports:
+      - "9091:9091"
+    environment:
+      - TZ=Asia/Shanghai
+    command: ["./rpc", "-f", "etc/appointment-canary.yaml"]
+    depends_on:
+      - etcd-reserve
+      - redis-reserve
+      - mysql-reserve
+      - kafka-reserve
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # 压测工具
   k6-stress:
     image: grafana/k6:latest
     container_name: k6-stress

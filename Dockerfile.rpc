@@ -1,0 +1,16 @@
+# 预约抢票系统 - RPC 服务镜像
+FROM golang:1.23-alpine AS builder
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ARG CONFIG_FILE=etc/appointment.yaml
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/rpc ./apps/appointment/rpc
+
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates tzdata
+WORKDIR /app
+COPY --from=builder /app/rpc .
+COPY apps/appointment/rpc/etc/ ./etc/
+EXPOSE 9090
+CMD ["./rpc", "-f", "etc/appointment.yaml"]
